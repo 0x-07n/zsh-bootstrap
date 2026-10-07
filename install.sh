@@ -7,16 +7,8 @@ set -Eeuo pipefail
 # ZSH BOOTSTRAP
 # ============================================================
 
-PROJECT_NAME="zsh-bootstrap"
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-CONFIG_DIR="$SCRIPT_DIR/config"
-SCRIPTS_DIR="$SCRIPT_DIR/scripts"
-
-ZSH_CUSTOM_DIR="$HOME/.oh-my-zsh/custom"
-
-BACKUP_DATE="$(date '+%Y%m%d-%H%M%S')"
+REPO_URL="https://github.com/0x-07n/zsh-bootstrap.git"
+INSTALL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh-bootstrap"
 
 
 # ============================================================
@@ -59,10 +51,107 @@ echo
 
 
 # ============================================================
+# BOOTSTRAP MODE
+# ============================================================
+#
+# Si le script est lancé avec :
+#
+# curl .../install.sh | bash
+#
+# les fichiers config/ et scripts/ n'existent pas encore.
+# On clone donc automatiquement le repository puis on relance
+# ce même script depuis le clone local.
+# ============================================================
+
+if [[ "${1:-}" != "--local" ]]; then
+
+    if ! command -v git >/dev/null 2>&1; then
+        error "Git est nécessaire pour récupérer zsh-bootstrap."
+        echo
+        echo "Installe Git puis relance cette commande."
+        exit 1
+    fi
+
+    mkdir -p "$(dirname "$INSTALL_DIR")"
+
+    if [[ -d "$INSTALL_DIR/.git" ]]; then
+
+        info "Installation existante détectée."
+        info "Mise à jour du repository..."
+
+        git -C "$INSTALL_DIR" pull --ff-only
+
+    else
+
+        if [[ -e "$INSTALL_DIR" ]]; then
+            error "$INSTALL_DIR existe mais n'est pas un repository Git."
+            exit 1
+        fi
+
+        info "Téléchargement de zsh-bootstrap..."
+
+        git clone \
+            --depth=1 \
+            "$REPO_URL" \
+            "$INSTALL_DIR"
+
+    fi
+
+    success "Repository disponible dans : $INSTALL_DIR"
+
+    echo
+
+    exec bash "$INSTALL_DIR/install.sh" --local
+fi
+
+
+# ============================================================
+# LOCAL MODE
+# ============================================================
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+CONFIG_DIR="$SCRIPT_DIR/config"
+SCRIPTS_DIR="$SCRIPT_DIR/scripts"
+
+ZSH_CUSTOM_DIR="$HOME/.oh-my-zsh/custom"
+
+BACKUP_DATE="$(date '+%Y%m%d-%H%M%S')"
+
+
+# ============================================================
+# VALIDATION
+# ============================================================
+
+if [[ ! -f "$SCRIPTS_DIR/detect-os.sh" ]]; then
+    error "Fichier manquant : scripts/detect-os.sh"
+    exit 1
+fi
+
+if [[ ! -f "$SCRIPTS_DIR/install-packages.sh" ]]; then
+    error "Fichier manquant : scripts/install-packages.sh"
+    exit 1
+fi
+
+if [[ ! -f "$CONFIG_DIR/zshrc" ]]; then
+    error "Fichier manquant : config/zshrc"
+    exit 1
+fi
+
+if [[ ! -f "$CONFIG_DIR/starship.toml" ]]; then
+    error "Fichier manquant : config/starship.toml"
+    exit 1
+fi
+
+
+# ============================================================
 # LOAD MODULES
 # ============================================================
 
+# shellcheck source=/dev/null
 source "$SCRIPTS_DIR/detect-os.sh"
+
+# shellcheck source=/dev/null
 source "$SCRIPTS_DIR/install-packages.sh"
 
 
@@ -130,7 +219,13 @@ install_plugin() {
     if [[ -d "$destination/.git" ]]; then
 
         info "Mise à jour de $plugin_name..."
-        git -C "$destination" pull --ff-only >/dev/null
+
+        git -C "$destination" pull --ff-only || \
+            warning "Impossible de mettre à jour $plugin_name."
+
+    elif [[ -e "$destination" ]]; then
+
+        warning "$destination existe déjà mais n'est pas un repo Git."
 
     else
 
@@ -146,7 +241,7 @@ install_plugin() {
 
 
 install_plugin \
-    "https://github.com/zsh-users/zsh-autosuggestions" \
+    "https://github.com/zsh-users/zsh-autosuggestions.git" \
     "zsh-autosuggestions"
 
 install_plugin \
@@ -154,7 +249,7 @@ install_plugin \
     "zsh-syntax-highlighting"
 
 install_plugin \
-    "https://github.com/zsh-users/zsh-completions" \
+    "https://github.com/zsh-users/zsh-completions.git" \
     "zsh-completions"
 
 success "Plugins Zsh installés."
@@ -229,7 +324,7 @@ success "Configuration Starship installée."
 
 ZSH_PATH="$(command -v zsh)"
 
-CURRENT_USER="${USER:-$(id -un)}"
+CURRENT_USER="$(id -un)"
 
 CURRENT_SHELL="$(getent passwd "$CURRENT_USER" | cut -d: -f7)"
 
@@ -238,13 +333,17 @@ if [[ "$CURRENT_SHELL" != "$ZSH_PATH" ]]; then
     info "Configuration de Zsh comme shell par défaut..."
 
     if chsh -s "$ZSH_PATH"; then
+
         success "Zsh est maintenant le shell par défaut."
+
     else
+
         warning "Impossible de modifier automatiquement le shell."
-        warning "Commande à exécuter manuellement :"
+        warning "Exécute manuellement :"
         echo
         echo "    chsh -s $ZSH_PATH"
         echo
+
     fi
 
 else
@@ -263,7 +362,11 @@ echo "======================================"
 echo "        Installation terminée"
 echo "======================================"
 echo
-echo "Lance :"
+echo "Repository local :"
+echo
+echo "    $INSTALL_DIR"
+echo
+echo "Pour appliquer Zsh immédiatement :"
 echo
 echo "    exec zsh"
 echo
