@@ -1,0 +1,228 @@
+# ============================================================
+# ZSH BOOTSTRAP CONFIGURATION
+# ============================================================
+
+
+# ============================================================
+# OH MY ZSH
+# ============================================================
+
+export ZSH="$HOME/.oh-my-zsh"
+
+ZSH_THEME=""
+
+plugins=(
+    git
+    sudo
+    docker
+    docker-compose
+    kubectl
+    terraform
+    ansible
+    python
+    pip
+    npm
+    node
+    systemd
+    ssh
+    fzf
+    zsh-autosuggestions
+    zsh-completions
+    zsh-syntax-highlighting
+)
+
+if [[ -f "$ZSH/oh-my-zsh.sh" ]]; then
+    source "$ZSH/oh-my-zsh.sh"
+fi
+
+
+# ============================================================
+# HISTORY
+# ============================================================
+
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=100000
+SAVEHIST=100000
+
+setopt APPEND_HISTORY
+setopt INC_APPEND_HISTORY
+setopt SHARE_HISTORY
+
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_SAVE_NO_DUPS
+setopt HIST_FIND_NO_DUPS
+setopt HIST_REDUCE_BLANKS
+
+
+# ============================================================
+# HISTORY SEARCH
+# ============================================================
+
+autoload -U up-line-or-beginning-search
+autoload -U down-line-or-beginning-search
+
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+
+bindkey "^[[A" up-line-or-beginning-search
+bindkey "^[[B" down-line-or-beginning-search
+
+
+# ============================================================
+# AUTOSUGGESTIONS
+# ============================================================
+
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=8'
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+
+bindkey '^[[C' forward-char
+bindkey '^[[1;5C' forward-word
+
+
+# ============================================================
+# COMPLETION
+# ============================================================
+
+autoload -Uz compinit
+compinit
+
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*:descriptions' format '[%d]'
+zstyle ':completion:*' file-sort modification
+
+if [[ -n "$LS_COLORS" ]]; then
+    zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+fi
+
+
+# ============================================================
+# ZSH OPTIONS
+# ============================================================
+
+setopt AUTO_CD
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+setopt INTERACTIVE_COMMENTS
+
+
+# ============================================================
+# FZF
+# ============================================================
+
+if command -v fzf >/dev/null 2>&1; then
+
+    if fzf --zsh >/dev/null 2>&1; then
+        source <(fzf --zsh)
+    fi
+
+fi
+
+
+# ============================================================
+# GENERIC ALIASES
+# ============================================================
+
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+alias c='clear'
+
+
+# ============================================================
+# EZA
+# ============================================================
+
+if command -v eza >/dev/null 2>&1; then
+
+    alias ls='eza'
+    alias ll='eza -lah --icons --group-directories-first'
+    alias la='eza -a --icons --group-directories-first'
+    alias l='eza -lh --icons --group-directories-first'
+    alias tree='eza --tree --icons'
+
+fi
+
+
+# ============================================================
+# BAT
+# ============================================================
+
+if command -v batcat >/dev/null 2>&1; then
+
+    alias cat='batcat --paging=never'
+
+elif command -v bat >/dev/null 2>&1; then
+
+    alias cat='bat --paging=never'
+
+fi
+
+
+# ============================================================
+# GIT
+# ============================================================
+
+alias gs='git status'
+alias ga='git add'
+alias gaa='git add .'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git pull'
+alias gd='git diff'
+alias gb='git branch'
+
+alias lg='git log --oneline --graph --decorate --all'
+
+
+# ============================================================
+# DOCKER
+# ============================================================
+
+if command -v docker >/dev/null 2>&1; then
+
+    alias d='docker'
+    alias dc='docker compose'
+    alias dps='docker ps'
+    alias dpsa='docker ps -a'
+
+fi
+
+
+# ============================================================
+# KUBERNETES
+# ============================================================
+
+if command -v kubectl >/dev/null 2>&1; then
+
+    alias k='kubectl'
+    alias kgp='kubectl get pods'
+    alias kgs='kubectl get services'
+    alias kgn='kubectl get nodes'
+
+fi
+
+
+# ============================================================
+# TERRAFORM
+# ============================================================
+
+if command -v terraform >/dev/null 2>&1; then
+
+    alias tf='terraform'
+    alias tfi='terraform init'
+    alias tfp='terraform plan'
+    alias tfa='terraform apply'
+    alias tfd='terraform destroy'
+
+fi
+
+
+# ============================================================
+# STARSHIP
+# ============================================================
+
+if command -v starship >/dev/null 2>&1; then
+    eval "$(starship init zsh)"
+fi

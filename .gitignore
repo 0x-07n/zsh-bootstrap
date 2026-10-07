@@ -1,0 +1,9 @@
+*.backup
+*.backup-*
+*.log
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
