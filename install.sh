@@ -66,10 +66,37 @@ echo
 if [[ "${1:-}" != "--local" ]]; then
 
     if ! command -v git >/dev/null 2>&1; then
-        error "Git est nécessaire pour récupérer zsh-bootstrap."
-        echo
-        echo "Installe Git puis relance cette commande."
-        exit 1
+
+    	info "Git n'est pas installé."
+
+    	if command -v apt-get >/dev/null 2>&1; then
+
+        	info "Installation de Git avec apt..."
+        	sudo apt-get update
+        	sudo apt-get install -y git curl
+
+    	elif command -v dnf >/dev/null 2>&1; then
+
+        	info "Installation de Git avec dnf..."
+        	sudo dnf install -y git curl
+
+    	elif command -v pacman >/dev/null 2>&1; then
+
+        	info "Installation de Git avec pacman..."
+        	sudo pacman -Sy --needed --noconfirm git curl
+
+    	elif command -v zypper >/dev/null 2>&1; then
+
+        	info "Installation de Git avec zypper..."
+        	sudo zypper --non-interactive install git curl
+
+    	else
+
+        	error "Impossible d'installer Git automatiquement."
+        	exit 1
+
+    	fi
+
     fi
 
     mkdir -p "$(dirname "$INSTALL_DIR")"
@@ -352,6 +379,17 @@ else
 
 fi
 
+# ============================================================
+# ZSH-BOOTSTRAP CLI
+# ============================================================
+
+mkdir -p "$HOME/.local/bin"
+
+ln -sf \
+    "$INSTALL_DIR/bin/zsh-bootstrap" \
+    "$HOME/.local/bin/zsh-bootstrap"
+
+success "Commande zsh-bootstrap installée."
 
 # ============================================================
 # END

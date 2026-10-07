@@ -2,7 +2,20 @@
 
 set -Eeuo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INSTALL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh-bootstrap"
+
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+RESET='\033[0m'
+
+
+info() {
+    echo -e "${CYAN}[INFO]${RESET} $1"
+}
+
+success() {
+    echo -e "${GREEN}[ OK ]${RESET} $1"
+}
 
 
 echo
@@ -12,19 +25,22 @@ echo "======================================"
 echo
 
 
-if [[ -d "$SCRIPT_DIR/.git" ]]; then
-
-    echo "[+] Mise à jour du repository"
-
-    git -C "$SCRIPT_DIR" pull --ff-only
-
+if [[ ! -d "$INSTALL_DIR/.git" ]]; then
+    echo "[ERROR] Repository local introuvable :"
+    echo
+    echo "    $INSTALL_DIR"
+    exit 1
 fi
 
 
-if [[ -d "$HOME/.oh-my-zsh" ]]; then
+info "Mise à jour de zsh-bootstrap"
 
-    echo "[+] Mise à jour Oh My Zsh"
+git -C "$INSTALL_DIR" pull --ff-only
 
+
+if [[ -d "$HOME/.oh-my-zsh/.git" ]]; then
+
+    info "Mise à jour de Oh My Zsh"
     git -C "$HOME/.oh-my-zsh" pull --ff-only || true
 
 fi
@@ -41,26 +57,36 @@ do
 
     if [[ -d "$PLUGIN_DIR/.git" ]]; then
 
-        echo "[+] Mise à jour $plugin"
-
-        git -C "$PLUGIN_DIR" pull --ff-only
+        info "Mise à jour $plugin"
+        git -C "$PLUGIN_DIR" pull --ff-only || true
 
     fi
 
 done
 
 
-echo "[+] Réinstallation des configurations"
+info "Réinstallation des configurations"
 
 mkdir -p "$HOME/.config"
+mkdir -p "$HOME/.local/bin"
 
-cp "$SCRIPT_DIR/config/zshrc" \
-   "$HOME/.zshrc"
+cp \
+    "$INSTALL_DIR/config/zshrc" \
+    "$HOME/.zshrc"
 
-cp "$SCRIPT_DIR/config/starship.toml" \
-   "$HOME/.config/starship.toml"
+cp \
+    "$INSTALL_DIR/config/starship.toml" \
+    "$HOME/.config/starship.toml"
 
+ln -sf \
+    "$INSTALL_DIR/bin/zsh-bootstrap" \
+    "$HOME/.local/bin/zsh-bootstrap"
+
+
+success "Mise à jour terminée."
 
 echo
-echo "[OK] Mise à jour terminée."
+echo "Recharge le shell avec :"
+echo
+echo "    exec zsh"
 echo

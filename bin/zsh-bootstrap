@@ -1,0 +1,179 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+INSTALL_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh-bootstrap"
+
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+RESET='\033[0m'
+
+
+info() {
+    echo -e "${CYAN}[INFO]${RESET} $1"
+}
+
+success() {
+    echo -e "${GREEN}[ OK ]${RESET} $1"
+}
+
+warning() {
+    echo -e "${YELLOW}[WARN]${RESET} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${RESET} $1"
+}
+
+
+show_help() {
+
+    cat <<EOF
+
+ZSH Bootstrap
+
+Usage:
+  zsh-bootstrap <command>
+
+Commands:
+  update       Update zsh-bootstrap and plugins
+  uninstall    Disable bootstrap configuration
+  doctor       Check installation health
+  version      Show installed repository revision
+  help         Show this help
+
+EOF
+}
+
+
+doctor() {
+
+    echo
+    echo "======================================"
+    echo "          ZSH Bootstrap Doctor"
+    echo "======================================"
+    echo
+
+    local failures=0
+
+    check_command() {
+
+        local cmd="$1"
+
+        if command -v "$cmd" >/dev/null 2>&1; then
+            success "$cmd : $(command -v "$cmd")"
+        else
+            error "$cmd : introuvable"
+            failures=$((failures + 1))
+        fi
+    }
+
+
+    check_command zsh
+    check_command git
+    check_command starship
+    check_command fzf
+    check_command eza
+
+
+    if command -v batcat >/dev/null 2>&1; then
+        success "bat : $(command -v batcat)"
+
+    elif command -v bat >/dev/null 2>&1; then
+        success "bat : $(command -v bat)"
+
+    else
+        error "bat : introuvable"
+        failures=$((failures + 1))
+    fi
+
+
+    if [[ -d "$HOME/.oh-my-zsh" ]]; then
+        success "Oh My Zsh installé"
+    else
+        error "Oh My Zsh absent"
+        failures=$((failures + 1))
+    fi
+
+
+    if [[ -f "$HOME/.zshrc" ]]; then
+        success "~/.zshrc présent"
+    else
+        error "~/.zshrc absent"
+        failures=$((failures + 1))
+    fi
+
+
+    if [[ -f "$HOME/.config/starship.toml" ]]; then
+        success "starship.toml présent"
+    else
+        error "starship.toml absent"
+        failures=$((failures + 1))
+    fi
+
+
+    for plugin in \
+        zsh-autosuggestions \
+        zsh-syntax-highlighting \
+        zsh-completions
+    do
+
+        if [[ -d "$HOME/.oh-my-zsh/custom/plugins/$plugin" ]]; then
+            success "$plugin installé"
+        else
+            error "$plugin absent"
+            failures=$((failures + 1))
+        fi
+
+    done
+
+
+    echo
+
+    if [[ "$failures" -eq 0 ]]; then
+        success "Installation saine."
+        return 0
+    else
+        error "$failures problème(s) détecté(s)."
+        return 1
+    fi
+}
+
+
+case "${1:-help}" in
+
+    update)
+        exec bash "$INSTALL_DIR/update.sh"
+        ;;
+
+    uninstall)
+        exec bash "$INSTALL_DIR/uninstall.sh"
+        ;;
+
+    doctor)
+        doctor
+        ;;
+
+    version)
+
+        if [[ -d "$INSTALL_DIR/.git" ]]; then
+            git -C "$INSTALL_DIR" log -1 --oneline
+        else
+            error "Repository local introuvable."
+            exit 1
+        fi
+        ;;
+
+    help|--help|-h)
+        show_help
+        ;;
+
+    *)
+        error "Commande inconnue : ${1:-}"
+        show_help
+        exit 1
+        ;;
+
+esac
